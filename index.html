@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini CRM</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f6f4;--card:#fff;--ink:#16302b;--mut:#5d7a73;--line:#d5e0dc;--acc:#0f766e;--accbg:#d7efeb;
+--c1:#b45309;--b1:#fde8cc;--c2:#1d4ed8;--b2:#dbe7ff;--c3:#15803d;--b3:#d6f3df}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b18;--card:#16262b;--ink:#e6f2ef;--mut:#93b0a8;--line:#2a3f3a;--acc:#5eead4;--accbg:#173a36;--c1:#fbbf77;--b1:#3b2a12;--c2:#9db9ff;--b2:#1b2a4d;--c3:#86e0a3;--b3:#143222}}
+:root[data-theme="dark"]{--bg:#0f1b18;--card:#16262b;--ink:#e6f2ef;--mut:#93b0a8;--line:#2a3f3a;--acc:#5eead4;--accbg:#173a36;--c1:#fbbf77;--b1:#3b2a12;--c2:#9db9ff;--b2:#1b2a4d;--c3:#86e0a3;--b3:#143222}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.45}
+.wrap{max-width:960px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.6rem;margin:0}
+.sub{color:var(--mut);margin:2px 0 18px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.stat{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stat b{display:block;font-size:1.5rem}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+input,select,textarea,button{font:inherit;color:var(--ink)}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+.bar input{flex:2;min-width:160px}.bar select{flex:1;min-width:130px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 14px}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.p{color:#06231f}}
+:root[data-theme="dark"] button.p{color:#06231f}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.list{display:grid;gap:10px}
+.row{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:6px 12px}
+.name{font-weight:600}.mut{color:var(--mut);font-size:.9rem}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.8rem;font-weight:600}
+.t-Prospecto{background:var(--b1);color:var(--c1)}.t-Negociación{background:var(--b2);color:var(--c2)}.t-Cliente{background:var(--b3);color:var(--c3)}
+.acts{display:flex;gap:6px;align-items:center}
+.acts button{padding:4px 10px;font-size:.85rem}
+.note{grid-column:1/-1;font-size:.9rem;border-top:1px dashed var(--line);padding-top:6px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:min(440px,92vw);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+label{display:block;font-size:.85rem;color:var(--mut);margin:8px 0 3px}
+.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.empty{text-align:center;color:var(--mut);padding:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mini CRM</h1>
+  <p class="sub">Gestión de clientes y seguimiento de ventas</p>
+  <div class="stats" id="stats"></div>
+  <div class="bar">
+    <input id="q" type="search" placeholder="Buscar por nombre, empresa o correo" aria-label="Buscar">
+    <select id="f" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>Prospecto</option><option>Negociación</option><option>Cliente</option></select>
+    <button class="p" id="add">Agregar cliente</button>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<dialog id="dlg">
+  <h2 id="dt" style="margin:0 0 4px;font-size:1.2rem">Cliente</h2>
+  <label for="n">Nombre</label><input id="n">
+  <label for="c">Empresa</label><input id="c">
+  <label for="e">Correo</label><input id="e" type="email">
+  <label for="t">Teléfono</label><input id="t">
+  <label for="s">Estado</label><select id="s"><option>Prospecto</option><option>Negociación</option><option>Cliente</option></select>
+  <label for="o">Notas</label><textarea id="o" rows="3"></textarea>
+  <div class="fa"><button id="cx">Cancelar</button><button class="p" id="sv">Guardar</button></div>
+</dialog>
+
+<script>
+const KEY="crm_clientes_v1";
+const seed=[
+ {id:1,n:"María Quispe",c:"Textiles Andinos",e:"maria@textilesandinos.pe",t:"951 234 567",s:"Cliente",o:"Compra mensual de lana de alpaca. Llamar el día 5."},
+ {id:2,n:"Carlos Mamani",c:"Hotel Altiplano",e:"cmamani@hotelaltiplano.pe",t:"962 345 678",s:"Negociación",o:"Pidió cotización para 40 toallas. Enviar propuesta."},
+ {id:3,n:"Lucía Ramos",c:"Café Titicaca",e:"lucia@cafetiticaca.pe",t:"973 456 789",s:"Prospecto",o:"Contactada en feria. Interesada en packaging."},
+ {id:4,n:"Jorge Condori",c:"Agroexport Puno",e:"jcondori@agroexport.pe",t:"984 567 890",s:"Cliente",o:"Contrato anual firmado. Renovar en marzo."},
+ {id:5,n:"Ana Huanca",c:"Artesanías del Sur",e:"ana@artesaniasdelsur.pe",t:"995 678 901",s:"Negociación",o:"Revisando precios al por mayor."}
+];
+let data;
+try{data=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){data=null}
+if(!Array.isArray(data)||!data.length)data=seed.slice();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+let editId=null;
+
+function render(){
+  const q=$("q").value.toLowerCase(),f=$("f").value;
+  const cnt=s=>data.filter(d=>d.s===s).length;
+  $("stats").innerHTML=`<div class="stat"><b>${data.length}</b>Total</div><div class="stat"><b>${cnt("Prospecto")}</b>Prospectos</div><div class="stat"><b>${cnt("Negociación")}</b>En negociación</div><div class="stat"><b>${cnt("Cliente")}</b>Clientes</div>`;
+  const r=data.filter(d=>(!f||d.s===f)&&(d.n+d.c+d.e).toLowerCase().includes(q));
+  $("list").innerHTML=r.length?r.map(d=>`<div class="row"><div><div class="name">${esc(d.n)}</div><div class="mut">${esc(d.c)} · ${esc(d.e)} · ${esc(d.t)}</div></div>
+  <div class="acts"><span class="tag t-${d.s}">${d.s}</span><button data-e="${d.id}">Editar</button><button data-d="${d.id}">Borrar</button></div>
+  ${d.o?`<div class="note">${esc(d.o)}</div>`:""}</div>`).join(""):`<div class="empty">No hay clientes con ese filtro. Prueba otra búsqueda o agrega uno nuevo.</div>`;
+}
+function open(d){
+  editId=d?d.id:null;$("dt").textContent=d?"Editar cliente":"Nuevo cliente";
+  $("n").value=d?d.n:"";$("c").value=d?d.c:"";$("e").value=d?d.e:"";$("t").value=d?d.t:"";$("s").value=d?d.s:"Prospecto";$("o").value=d?d.o:"";
+  $("dlg").showModal();
+}
+$("add").onclick=()=>open(null);
+$("cx").onclick=()=>$("dlg").close();
+$("sv").onclick=()=>{
+  const n=$("n").value.trim();if(!n){$("n").focus();return}
+  const v={n,c:$("c").value.trim(),e:$("e").value.trim(),t:$("t").value.trim(),s:$("s").value,o:$("o").value.trim()};
+  if(editId){data=data.map(d=>d.id===editId?{...d,...v}:d)}else{data.push({id:Date.now(),...v})}
+  save();$("dlg").close();render();
+};
+$("list").onclick=e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.e)open(data.find(d=>d.id==b.dataset.e));
+  if(b.dataset.d&&confirm("¿Borrar este cliente?")){data=data.filter(d=>d.id!=b.dataset.d);save();render()}
+};
+$("q").oninput=render;$("f").onchange=render;
+render();
+</script>
+</body>
+</html>
